@@ -1,0 +1,152 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isEventHost(eventId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/events/$(eventId)).data.hostId == request.auth.uid;
+    }
+
+    function isValidRsvpToken(eventId, guestId, token) {
+      return get(/databases/$(database)/documents/events/$(eventId)/guests/$(guestId)).data.rsvpToken == token;
+    }
+
+
+    // ── users ───────────────────────────────────────────────────
+    match /users/{userId} {
+      // User can read/write their own profile; admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+
+    // ── events ──────────────────────────────────────────────────
+    match /events/{eventId} {
+      // Host owns the event; active events are publicly readable (for RSVP page)
+      allow read: if resource.data.status == 'active' ||
+                     (isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin()));
+      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.hostId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.hostId == request.auth.uid;
+
+      // ── functions (ceremonies) ─────────────────────────────
+      match /functions/{functionId} {
+        // Active event functions are readable publicly (for RSVP page)
+        allow read: if get(/databases/$(database)/documents/events/$(eventId)).data.status == 'active' ||
+                       (isSignedIn() && isEventHost(eventId));
+        allow write: if isSignedIn() && isEventHost(eventId);
+      }
+
+      // ── guests ─────────────────────────────────────────────
+      match /guests/{guestId} {
+        allow read: if isSignedIn() && isEventHost(eventId);
+        allow create: if isSignedIn() && isEventHost(eventId);
+        // Guests can update their own RSVP status (token-based, enforced in app logic)
+        allow update: if true;
+        allow delete: if isSignedIn() && isEventHost(eventId);
+      }
+
+      // ── rsvps ──────────────────────────────────────────────
+      match /rsvps/{rsvpId} {
+        // Host can read all RSVPs for their event
+        allow read: if isSignedIn() && isEventHost(eventId);
+        // Anyone can create an RSVP (guests don't need accounts)
+        allow create: if true;
+        allow update: if isSignedIn() && isEventHost(eventId);
+        allow delete: if isSignedIn() && isEventHost(eventId);
+      }
+    }
+
+
+    // ── rsvpTokens ──────────────────────────────────────────────
+    match /rsvpTokens/{token} {
+      // Public read — the RSVP page uses this to look up eventId + guestId
+      allow read: if true;
+      // Only authenticated users (hosts) can write (via addGuest)
+      allow write: if isSignedIn();
+    }
+
+
+    // ── shareCodes ──────────────────────────────────────────────
+    match /shareCodes/{code} {
+      // Public read — the public invitation page uses this to look up eventId
+      allow read: if true;
+      // Only authenticated users (hosts) can write (via createEvent)
+      allow write: if isSignedIn();
+    }
+
+
+    // ── invitations ─────────────────────────────────────────────
+    match /invitations/{invitationId} {
+      // Public read for published invitations (guests view without auth)
+      allow read: if resource.data.status == 'published' ||
+                     (isSignedIn() && resource.data.hostId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.hostId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.hostId == request.auth.uid;
+    }
+
+
+    // ── templates ───────────────────────────────────────────────
+    match /templates/{templateId} {
+      // All authenticated users can read active templates
+      allow read: if isSignedIn() && resource.data.isActive == true || isAdmin();
+      // Only admins can write templates
+      allow write: if isAdmin();
+    }
+
+
+    // ── subscriptionPlans ────────────────────────────────────────
+    match /subscriptionPlans/{planId} {
+      allow read: if true; // Public pricing info
+      allow write: if isAdmin();
+    }
+
+
+    // ── subscriptions ────────────────────────────────────────────
+    match /subscriptions/{subscriptionId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+
+
+    // ── notifications ────────────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (
+        resource.data.hostId == request.auth.uid || isAdmin()
+      );
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+
+    // ── supportTickets ───────────────────────────────────────────
+    match /supportTickets/{ticketId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+    }
+  }
+}
