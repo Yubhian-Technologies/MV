@@ -33,6 +33,7 @@ import {
   getGuests,
   addGuest,
   updateGuest,
+  updateGuestRsvp,
   deleteGuest,
   type AddGuestData,
 } from "@/lib/firebase/guests";
@@ -275,20 +276,30 @@ function GuestForm({
 
 // ─── Guest Row ───────────────────────────────────────────────────────────────
 
+const RSVP_STATUS_LABELS: Record<Guest["rsvpStatus"], string> = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  declined: "Declined",
+  maybe: "Maybe",
+};
+
 function GuestRow({
   guest,
   functions,
   event,
   onEdit,
   onDelete,
+  onRsvpChange,
 }: {
   guest: Guest;
   functions: EventFunction[];
   event: WeddingEvent;
   onEdit: (g: Guest) => void;
   onDelete: (g: Guest) => void;
+  onRsvpChange: (guest: Guest, newStatus: Guest["rsvpStatus"]) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [showRsvpMenu, setShowRsvpMenu] = useState(false);
   const fnMap = Object.fromEntries(functions.map((f) => [f.functionId, f]));
   const invitedNames = guest.invitedFunctions
     .map((id) => {
@@ -339,7 +350,48 @@ function GuestRow({
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-slate-900">{guest.name}</p>
           <SideBadge side={guest.side} />
-          <RsvpBadge status={guest.rsvpStatus} />
+          {/* Clickable RSVP badge — opens inline status picker */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowRsvpMenu((v) => !v)}
+              className={cn(
+                "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
+                RSVP_STYLES[guest.rsvpStatus]
+              )}
+              title="Click to change RSVP status"
+            >
+              {(() => { const Icon = RSVP_ICONS[guest.rsvpStatus]; return <Icon className="h-3 w-3" />; })()}
+              {RSVP_STATUS_LABELS[guest.rsvpStatus]}
+              <span className="ml-0.5 opacity-60">▾</span>
+            </button>
+            {showRsvpMenu && (
+              <div className="absolute left-0 top-full z-20 mt-1 w-32 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                {(["pending", "confirmed", "declined", "maybe"] as const).map((s) => {
+                  const Icon = RSVP_ICONS[s];
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setShowRsvpMenu(false);
+                        if (s !== guest.rsvpStatus) onRsvpChange(guest, s);
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
+                        s === guest.rsvpStatus
+                          ? RSVP_STYLES[s]
+                          : "text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      <Icon className="h-3 w-3" />
+                      {RSVP_STATUS_LABELS[s]}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <span className="text-xs text-slate-400">{guest.seatCount} seat{guest.seatCount !== 1 ? "s" : ""}</span>
         </div>
 
@@ -474,13 +526,13 @@ export default function GuestsPage() {
         seatCount: data.seatCount,
         notes: data.notes || undefined,
       };
-      const id = await addGuest(eventId, payload);
+      const { guestId, rsvpToken } = await addGuest(eventId, payload);
       const newGuest: Guest = {
-        guestId: id,
+        guestId,
         ...payload,
         groups: [],
         rsvpStatus: "pending",
-        rsvpToken: "",
+        rsvpToken,
         shareStatus: "not_sent",
         addedBy: "manual",
         createdAt: new Date(),
@@ -525,6 +577,19 @@ export default function GuestsPage() {
       await deleteGuest(eventId, guest);
       setGuests((prev) => prev.filter((g) => g.guestId !== guest.guestId));
       toast.success(`${guest.name} removed.`);
+    },
+    [eventId]
+  );
+
+  const handleRsvpChange = useCallback(
+    async (guest: Guest, newStatus: Guest["rsvpStatus"]) => {
+      await updateGuestRsvp(eventId, guest.guestId, newStatus, guest.rsvpStatus);
+      setGuests((prev) =>
+        prev.map((g) =>
+          g.guestId === guest.guestId ? { ...g, rsvpStatus: newStatus } : g
+        )
+      );
+      toast.success(`${guest.name} marked as ${newStatus}.`);
     },
     [eventId]
   );
@@ -716,6 +781,7 @@ export default function GuestsPage() {
                 event={event}
                 onEdit={setEditingGuest}
                 onDelete={handleDelete}
+                onRsvpChange={handleRsvpChange}
               />
             )
           )}

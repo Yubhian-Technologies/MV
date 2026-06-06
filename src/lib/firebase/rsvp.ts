@@ -6,6 +6,7 @@ import {
   addDoc,
   setDoc,
   updateDoc,
+  increment,
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
@@ -141,6 +142,7 @@ export async function submitRsvp(
   guestId: string,
   guestName: string,
   guestPhone: string | undefined,
+  oldRsvpStatus: Guest["rsvpStatus"],
   data: SubmitRsvpData
 ): Promise<string> {
   const totalAttendees = Object.values(data.functionResponses).reduce(
@@ -164,12 +166,29 @@ export async function submitRsvp(
     }
   );
 
-  // Update the guest's overall RSVP status
+  // Derive the new overall status and update the guest doc
   const newStatus = deriveOverallStatus(data.functionResponses);
   await updateDoc(doc(db, "events", eventId, "guests", guestId), {
     rsvpStatus: newStatus,
     rsvpUpdatedAt: serverTimestamp(),
   });
+
+  // Update event-level RSVP counters
+  const counterMap: Record<Guest["rsvpStatus"], string> = {
+    confirmed: "rsvpConfirmed",
+    declined: "rsvpDeclined",
+    pending: "rsvpPending",
+    maybe: "rsvpPending",
+  };
+  try {
+    await updateDoc(doc(db, "events", eventId), {
+      [counterMap[oldRsvpStatus]]: increment(-1),
+      [counterMap[newStatus]]: increment(1),
+      updatedAt: serverTimestamp(),
+    });
+  } catch {
+    // Silently fail if Firestore rules block the counter update
+  }
 
   return ref.id;
 }

@@ -240,6 +240,7 @@ export default function RsvpPage() {
         data.guest.guestId,
         data.guest.name,
         data.guest.phone,
+        data.guest.rsvpStatus,
         { functionResponses: responses, dietaryPreference: dietary, dietaryNotes, message }
       );
       setSubmitted(true);

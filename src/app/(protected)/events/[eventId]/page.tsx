@@ -35,29 +35,31 @@ import { getEventRsvps } from "@/lib/firebase/rsvp";
 import type { WeddingEvent, EventFunction, Guest, RSVPResponse } from "@/types";
 import { toast } from "sonner";
 
-const STAT_CARDS = (event: WeddingEvent) => [
-  {
-    label: "Total Guests",
-    value: event.totalGuests,
-    icon: Users,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-  },
-  {
-    label: "Confirmed",
-    value: event.rsvpConfirmed,
-    icon: CheckCircle2,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-  },
-  {
-    label: "Pending",
-    value: event.rsvpPending,
-    icon: Clock,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-  },
-];
+function buildStatCards(guests: Guest[]) {
+  return [
+    {
+      label: "Total Guests",
+      value: guests.length,
+      icon: Users,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      label: "Confirmed",
+      value: guests.filter((g) => g.rsvpStatus === "confirmed").length,
+      icon: CheckCircle2,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      label: "Pending",
+      value: guests.filter((g) => g.rsvpStatus === "pending" || g.rsvpStatus === "maybe").length,
+      icon: Clock,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+  ];
+}
 
 export default function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -178,9 +180,9 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats — computed from live guests array, always accurate */}
       <div className="grid gap-4 sm:grid-cols-3">
-        {STAT_CARDS(event).map(({ label, value, icon: Icon, color, bg }) => (
+        {buildStatCards(guests).map(({ label, value, icon: Icon, color, bg }) => (
           <Card key={label} className="border-slate-100 shadow-sm">
             <CardContent className="flex items-center gap-4 p-5">
               <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${bg}`}>

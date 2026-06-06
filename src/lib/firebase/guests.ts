@@ -78,7 +78,7 @@ export type AddGuestData = {
 export async function addGuest(
   eventId: string,
   data: AddGuestData
-): Promise<string> {
+): Promise<{ guestId: string; rsvpToken: string }> {
   const token = generateRsvpToken();
 
   const ref = await addDoc(guestsCol(eventId), {
@@ -109,7 +109,7 @@ export async function addGuest(
     updatedAt: serverTimestamp(),
   });
 
-  return ref.id;
+  return { guestId: ref.id, rsvpToken: token };
 }
 
 export async function getGuests(eventId: string): Promise<Guest[]> {
