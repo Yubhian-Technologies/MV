@@ -330,7 +330,7 @@ function GuestRow({
     const weddingDate = event.weddingDate instanceof Date
       ? event.weddingDate.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })
       : "";
-    const message = `Dear ${firstName},\n\nYou're personally invited to celebrate *${event.title}*! 🎊\n\nPlease RSVP here:\n${rsvpUrl}\n\n📅 ${weddingDate} · 📍 ${event.city}\n\nWith love,\n${event.brideName} & ${event.groomName}`;
+    const message = `💍 *Wedding Invitation*\n\nDear ${firstName},\n\n*${event.brideName} & ${event.groomName}* are getting married and would love to have you with them! 🎊\n\n📅 *${weddingDate}*\n📍 *${event.city}*\n\nKindly respond using your personal RSVP link:\n👉 ${rsvpUrl}\n\n_With love & blessings,_\n*${event.brideName} & ${event.groomName}*`;
     const phone = guest.phone ? guest.phone.replace(/[^0-9]/g, "") : "";
     const waUrl = phone
       ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
