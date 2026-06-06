@@ -157,6 +157,7 @@ export async function addFunction(
     venueName: string;
     venueAddress: string;
     venueCity: string;
+    mapsURL?: string;
     dressCode?: string;
     notes?: string;
     order: number;
@@ -166,9 +167,9 @@ export async function addFunction(
     collection(db, "events", eventId, "functions"),
     {
       ...data,
+      mapsURL: data.mapsURL ?? "",
       latitude: null,
       longitude: null,
-      mapsURL: "",
       rsvpConfirmed: 0,
       rsvpDeclined: 0,
     }

@@ -40,6 +40,7 @@ export const addFunctionSchema = z.object({
   venueName: z.string().min(2, "Venue name is required").max(100),
   venueAddress: z.string().min(5, "Address is required").max(200),
   venueCity: z.string().min(2, "City is required").max(60),
+  mapsURL: z.string().max(500).optional().or(z.literal("")),
   dressCode: z.string().max(100).optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
 });

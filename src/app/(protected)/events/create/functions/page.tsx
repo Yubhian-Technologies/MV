@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { Plus, ChevronRight, ChevronLeft, PartyPopper } from "lucide-react";
+import { Plus, ChevronRight, ChevronLeft, PartyPopper, MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +40,7 @@ function AddFunctionForm({
   editTarget?: EventFunction | null;
 }) {
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
   const {
     register,
     handleSubmit,
@@ -60,11 +61,32 @@ function AddFunctionForm({
           venueName: editTarget.venueName,
           venueAddress: editTarget.venueAddress,
           venueCity: editTarget.venueCity,
+          mapsURL: editTarget.mapsURL ?? "",
           dressCode: editTarget.dressCode ?? "",
           notes: editTarget.notes ?? "",
         }
       : { name: "", date: "", startTime: "" },
   });
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const url = `https://maps.google.com/?q=${coords.latitude},${coords.longitude}`;
+        setValue("mapsURL", url);
+        setLocating(false);
+        toast.success("Location captured!");
+      },
+      () => {
+        toast.error("Could not get your location. Please allow location access.");
+        setLocating(false);
+      }
+    );
+  };
 
   const selectedName = watch("name");
 
@@ -80,6 +102,7 @@ function AddFunctionForm({
         venueName: data.venueName,
         venueAddress: data.venueAddress,
         venueCity: data.venueCity,
+        mapsURL: data.mapsURL ?? "",
         dressCode: data.dressCode ?? "",
         notes: data.notes ?? "",
         order: nextOrder,
@@ -97,6 +120,7 @@ function AddFunctionForm({
         venueName: data.venueName,
         venueAddress: data.venueAddress,
         venueCity: data.venueCity,
+        mapsURL: data.mapsURL ?? "",
         dressCode: data.dressCode ?? "",
         notes: data.notes ?? "",
         order: nextOrder,
@@ -232,6 +256,36 @@ function AddFunctionForm({
         {errors.venueAddress && (
           <p className="text-xs text-red-500">{errors.venueAddress.message}</p>
         )}
+      </div>
+
+      {/* GPS / Maps link */}
+      <div className="space-y-1.5">
+        <Label htmlFor="mapsURL" className="flex items-center gap-1.5">
+          <MapPin className="h-3.5 w-3.5 text-rose-500" />
+          Location{" "}
+          <span className="font-normal text-slate-400">(optional)</span>
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            id="mapsURL"
+            placeholder="Paste Google Maps link or share URL"
+            {...register("mapsURL")}
+            className="flex-1"
+          />
+          <button
+            type="button"
+            onClick={handleUseMyLocation}
+            disabled={locating}
+            title="Use my current location"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-all hover:border-rose-300 hover:text-rose-600 disabled:opacity-50"
+          >
+            <Navigation className="h-3.5 w-3.5" />
+            {locating ? "Locating…" : "Use GPS"}
+          </button>
+        </div>
+        <p className="text-xs text-slate-400">
+          Share a Google Maps link so guests can navigate directly to the venue.
+        </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
