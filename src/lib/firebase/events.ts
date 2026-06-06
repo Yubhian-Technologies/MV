@@ -103,6 +103,33 @@ export async function getHostEvents(hostId: string): Promise<WeddingEvent[]> {
   );
 }
 
+export async function getHostEventsWithStats(hostId: string): Promise<WeddingEvent[]> {
+  const events = await getHostEvents(hostId);
+  if (events.length === 0) return events;
+
+  // Fetch guests for all events in parallel to compute accurate counts
+  const guestSnaps = await Promise.all(
+    events.map((e) => getDocs(collection(db, "events", e.eventId, "guests")))
+  );
+
+  return events.map((event, i) => {
+    let confirmed = 0, declined = 0, pending = 0;
+    guestSnaps[i].forEach((d) => {
+      const s = (d.data().rsvpStatus as string) ?? "pending";
+      if (s === "confirmed") confirmed++;
+      else if (s === "declined") declined++;
+      else pending++;
+    });
+    return {
+      ...event,
+      totalGuests: guestSnaps[i].size,
+      rsvpConfirmed: confirmed,
+      rsvpDeclined: declined,
+      rsvpPending: pending,
+    };
+  });
+}
+
 export async function updateEvent(
   eventId: string,
   data: Partial<Omit<WeddingEvent, "eventId" | "hostId" | "createdAt">>

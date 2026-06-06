@@ -146,24 +146,29 @@ export async function updateGuestRsvp(
   eventId: string,
   guestId: string,
   newStatus: Guest["rsvpStatus"],
-  oldStatus: Guest["rsvpStatus"]
+  // oldStatus kept for API compatibility but unused — we recount instead
+  _oldStatus: Guest["rsvpStatus"]
 ): Promise<void> {
   await updateDoc(guestDoc(eventId, guestId), {
     rsvpStatus: newStatus,
     rsvpUpdatedAt: serverTimestamp(),
   });
 
-  // Adjust event-level RSVP counters
-  const counterMap: Record<Guest["rsvpStatus"], "rsvpConfirmed" | "rsvpDeclined" | "rsvpPending"> = {
-    confirmed: "rsvpConfirmed",
-    declined: "rsvpDeclined",
-    pending: "rsvpPending",
-    maybe: "rsvpPending", // treat "maybe" as pending for counter purposes
-  };
+  // Recount from source to get exact totals (avoids increment drift)
+  const snap = await getDocs(guestsCol(eventId));
+  let confirmed = 0, declined = 0, pending = 0;
+  snap.forEach((d) => {
+    const s = (d.data().rsvpStatus as string) ?? "pending";
+    if (s === "confirmed") confirmed++;
+    else if (s === "declined") declined++;
+    else pending++;
+  });
 
   await updateDoc(eventDoc(eventId), {
-    [counterMap[oldStatus]]: increment(-1),
-    [counterMap[newStatus]]: increment(1),
+    totalGuests: snap.size,
+    rsvpConfirmed: confirmed,
+    rsvpDeclined: declined,
+    rsvpPending: pending,
     updatedAt: serverTimestamp(),
   });
 }

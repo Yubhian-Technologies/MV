@@ -11,7 +11,7 @@ import {
   CalendarHeart,
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { getHostEvents } from "@/lib/firebase/events";
+import { getHostEventsWithStats } from "@/lib/firebase/events";
 import { useAuth } from "@/lib/hooks/useAuth";
 import type { WeddingEvent } from "@/types";
 import { toast } from "sonner";
@@ -52,7 +52,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!user) return;
-    getHostEvents(user.uid)
+    getHostEventsWithStats(user.uid)
       .then(setEvents)
       .catch(() => toast.error("Could not load analytics."))
       .finally(() => setLoading(false));

@@ -17,7 +17,7 @@ import { EventCard } from "@/components/events/EventCard";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { cn } from "@/lib/utils";
 import { DashboardWelcome } from "@/components/dashboard/DashboardWelcome";
-import { getHostEvents } from "@/lib/firebase/events";
+import { getHostEventsWithStats } from "@/lib/firebase/events";
 import { useAuth } from "@/lib/hooks/useAuth";
 import type { WeddingEvent } from "@/types";
 import { toast } from "sonner";
@@ -29,7 +29,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    getHostEvents(user.uid)
+    getHostEventsWithStats(user.uid)
       .then(setEvents)
       .catch(() => toast.error("Could not load events."))
       .finally(() => setLoading(false));

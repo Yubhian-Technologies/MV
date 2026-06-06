@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { getHostEvents } from "@/lib/firebase/events";
+import { getHostEventsWithStats } from "@/lib/firebase/events";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import type { WeddingEvent } from "@/types";
@@ -80,7 +80,7 @@ export default function GuestsPage() {
 
   useEffect(() => {
     if (!user) return;
-    getHostEvents(user.uid)
+    getHostEventsWithStats(user.uid)
       .then(setEvents)
       .catch(() => toast.error("Could not load events."))
       .finally(() => setLoading(false));

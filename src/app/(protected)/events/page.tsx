@@ -7,7 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { EventCard } from "@/components/events/EventCard";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { getHostEvents } from "@/lib/firebase/events";
+import { getHostEventsWithStats } from "@/lib/firebase/events";
 import { useAuth } from "@/lib/hooks/useAuth";
 import type { WeddingEvent } from "@/types";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     if (!user) return;
-    getHostEvents(user.uid)
+    getHostEventsWithStats(user.uid)
       .then(setEvents)
       .catch(() => toast.error("Could not load events. Check your connection."))
       .finally(() => setLoading(false));
