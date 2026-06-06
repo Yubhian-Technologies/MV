@@ -121,6 +121,62 @@ function CeremonyCard({
   );
 }
 
+// ─── Already Responded Screen ─────────────────────────────────────────────────
+
+function AlreadyRsvpd({
+  guest,
+  event,
+  onUpdate,
+}: {
+  guest: Guest;
+  event: WeddingEvent;
+  onUpdate: () => void;
+}) {
+  const cfg = {
+    confirmed: { label: "Attending",     bg: "bg-emerald-100", text: "text-emerald-700", icon: CheckCircle2 },
+    declined:  { label: "Not Attending", bg: "bg-red-100",     text: "text-red-600",    icon: XCircle },
+    maybe:     { label: "Maybe",         bg: "bg-amber-100",   text: "text-amber-700",  icon: HelpCircle },
+    pending:   { label: "Pending",       bg: "bg-slate-100",   text: "text-slate-600",  icon: HelpCircle },
+  }[guest.rsvpStatus];
+
+  const Icon = cfg.icon;
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-white px-4 py-12">
+      <div className="w-full max-w-md space-y-6 text-center">
+        <div className="flex justify-center">
+          <div className={cn("flex h-20 w-20 items-center justify-center rounded-full", cfg.bg)}>
+            <Icon className={cn("h-10 w-10", cfg.text)} />
+          </div>
+        </div>
+
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">You&apos;ve already responded!</h1>
+          <p className="mt-1 text-slate-500">
+            {guest.name.split(" ")[0]}, your RSVP is recorded as{" "}
+            <span className={cn("font-semibold", cfg.text)}>{cfg.label}</span>.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
+          <p className="text-sm text-slate-500">
+            {event.brideName} &amp; {event.groomName}&apos;s wedding &middot; {event.city}
+          </p>
+          <button
+            type="button"
+            onClick={onUpdate}
+            className="w-full rounded-xl border border-rose-200 bg-rose-50 py-3 text-sm font-medium text-rose-700 transition-all hover:bg-rose-100"
+          >
+            Change my response
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-400">Powered by MarriageVerse Invitations</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Confirmation Screen ──────────────────────────────────────────────────────
 
 function Confirmation({
@@ -214,12 +270,17 @@ export default function RsvpPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadyRsvpd, setAlreadyRsvpd] = useState(false);
 
   useEffect(() => {
     getByRsvpToken(token)
       .then((result) => {
         if (!result) { setNotFound(true); return; }
         setData(result);
+        // If the guest already responded in a previous session, skip the form
+        if (result.guest.rsvpStatus !== "pending") {
+          setAlreadyRsvpd(true);
+        }
         // Default all functions to "attending" with seatCount = guest.seatCount
         const initial: Record<string, FunctionRsvp> = {};
         for (const fn of result.functions) {
@@ -265,6 +326,16 @@ export default function RsvpPage() {
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (alreadyRsvpd && data) {
+    return (
+      <AlreadyRsvpd
+        guest={data.guest}
+        event={data.event}
+        onUpdate={() => setAlreadyRsvpd(false)}
+      />
     );
   }
 

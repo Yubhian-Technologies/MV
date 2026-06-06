@@ -599,7 +599,7 @@ export default function GuestsPage() {
   const totalGroom = guests.filter((g) => g.side === "groom").length;
   const totalMutual = guests.filter((g) => g.side === "mutual").length;
   const totalConfirmed = guests.filter((g) => g.rsvpStatus === "confirmed").length;
-  const totalPending = guests.filter((g) => g.rsvpStatus === "pending").length;
+  const totalPending = guests.filter((g) => g.rsvpStatus === "pending" || g.rsvpStatus === "maybe").length;
 
   if (loading) return <LoadingSpinner fullPage />;
   if (!event) return null;
