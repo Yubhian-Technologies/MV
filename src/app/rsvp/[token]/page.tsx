@@ -121,57 +121,137 @@ function CeremonyCard({
   );
 }
 
-// ─── Already Responded Screen ─────────────────────────────────────────────────
+// ─── Already Responded / Thank-You Screen ────────────────────────────────────
 
 function AlreadyRsvpd({
   guest,
   event,
+  functions,
   onUpdate,
 }: {
   guest: Guest;
   event: WeddingEvent;
+  functions: EventFunction[];
   onUpdate: () => void;
 }) {
-  const cfg = {
-    confirmed: { label: "Attending",     bg: "bg-emerald-100", text: "text-emerald-700", icon: CheckCircle2 },
-    declined:  { label: "Not Attending", bg: "bg-red-100",     text: "text-red-600",    icon: XCircle },
-    maybe:     { label: "Maybe",         bg: "bg-amber-100",   text: "text-amber-700",  icon: HelpCircle },
-    pending:   { label: "Pending",       bg: "bg-slate-100",   text: "text-slate-600",  icon: HelpCircle },
+  const isAttending = guest.rsvpStatus === "confirmed";
+  const isDeclined  = guest.rsvpStatus === "declined";
+
+  const statusCfg = {
+    confirmed: { label: "Attending",       bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-200" },
+    declined:  { label: "Not Attending",   bg: "bg-red-50",      text: "text-red-600",     border: "border-red-200"     },
+    maybe:     { label: "Maybe Attending", bg: "bg-amber-50",    text: "text-amber-700",   border: "border-amber-200"   },
+    pending:   { label: "Pending",         bg: "bg-slate-50",    text: "text-slate-600",   border: "border-slate-200"   },
   }[guest.rsvpStatus];
 
-  const Icon = cfg.icon;
+  const weddingDate = event.weddingDate instanceof Date ? event.weddingDate : new Date(event.weddingDate);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-white px-4 py-12">
-      <div className="w-full max-w-md space-y-6 text-center">
-        <div className="flex justify-center">
-          <div className={cn("flex h-20 w-20 items-center justify-center rounded-full", cfg.bg)}>
-            <Icon className={cn("h-10 w-10", cfg.text)} />
+    <div className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-rose-50/30">
+      {/* Invitation-style header — same as RSVP form */}
+      <div className="bg-gradient-to-br from-rose-600 to-rose-800 px-6 py-12 text-center text-white">
+        <p className="text-sm font-light tracking-widest uppercase opacity-80 mb-3">
+          Wedding Invitation
+        </p>
+        <h1 className="text-4xl font-bold tracking-tight">{event.brideName}</h1>
+        <p className="text-2xl font-light opacity-80 my-1">&amp;</p>
+        <h1 className="text-4xl font-bold tracking-tight">{event.groomName}</h1>
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm opacity-80">
+          <CalendarHeart className="h-4 w-4" />
+          {weddingDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+          <span>·</span>
+          <MapPin className="h-4 w-4" />
+          {event.city}
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-lg px-4 py-8 space-y-5">
+        {/* Thank-you card */}
+        <div className="rounded-2xl border border-rose-100 bg-white p-6 shadow-sm text-center space-y-4">
+          <div className="flex justify-center">
+            <div className={cn(
+              "flex h-16 w-16 items-center justify-center rounded-full",
+              isAttending ? "bg-emerald-100" : isDeclined ? "bg-red-50" : "bg-amber-100"
+            )}>
+              {isAttending
+                ? <Heart className="h-8 w-8 text-emerald-600" fill="currentColor" />
+                : isDeclined
+                  ? <XCircle className="h-8 w-8 text-red-500" />
+                  : <HelpCircle className="h-8 w-8 text-amber-500" />
+              }
+            </div>
           </div>
+
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">
+              {isAttending
+                ? "Thank you for joining us! 🎉"
+                : isDeclined
+                  ? "We&apos;ll miss you! 💙"
+                  : "Thank you for responding!"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Dear {guest.name.split(" ")[0]}, your RSVP has been saved.
+            </p>
+          </div>
+
+          <span className={cn(
+            "inline-block rounded-full border px-4 py-1.5 text-sm font-semibold",
+            statusCfg.bg, statusCfg.text, statusCfg.border
+          )}>
+            {statusCfg.label}
+          </span>
         </div>
 
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">You&apos;ve already responded!</h1>
-          <p className="mt-1 text-slate-500">
-            {guest.name.split(" ")[0]}, your RSVP is recorded as{" "}
-            <span className={cn("font-semibold", cfg.text)}>{cfg.label}</span>.
-          </p>
-        </div>
+        {/* Ceremony details for attending guests */}
+        {isAttending && functions.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700">Your confirmed ceremonies:</p>
+            {functions.map((fn) => {
+              const displayName = fn.name === "Custom" && fn.customName ? fn.customName : fn.name;
+              const fnDate = fn.date instanceof Date ? fn.date : new Date(fn.date);
+              return (
+                <div key={fn.functionId} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm flex items-start gap-3">
+                  <span className="text-xl mt-0.5">{FN_EMOJI[fn.name] ?? "✨"}</span>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900 text-sm">{displayName}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                      <CalendarHeart className="h-3 w-3 shrink-0" />
+                      {formatDate(fnDate)}{fn.startTime ? ` · ${formatTime(fn.startTime)}` : ""}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      {fn.venueName}, {fn.venueCity}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
-          <p className="text-sm text-slate-500">
-            {event.brideName} &amp; {event.groomName}&apos;s wedding &middot; {event.city}
-          </p>
-          <button
-            type="button"
-            onClick={onUpdate}
-            className="w-full rounded-xl border border-rose-200 bg-rose-50 py-3 text-sm font-medium text-rose-700 transition-all hover:bg-rose-100"
+        {/* View full invitation */}
+        {event.shareCode && event.status === "active" && (
+          <a
+            href={`/i/${event.shareCode}`}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 py-3.5 text-sm font-medium text-rose-700 transition-all hover:bg-rose-100"
           >
-            Change my response
-          </button>
-        </div>
+            View Full Invitation 💌
+          </a>
+        )}
 
-        <p className="text-xs text-slate-400">Powered by MarriageVerse Invitations</p>
+        {/* Subtle change-response link */}
+        <button
+          type="button"
+          onClick={onUpdate}
+          className="w-full py-2 text-center text-sm text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          Need to change your response?
+        </button>
+
+        <p className="text-center text-xs text-slate-400 pb-4">
+          Powered by MarriageVerse Invitations
+        </p>
       </div>
     </div>
   );
@@ -334,6 +414,7 @@ export default function RsvpPage() {
       <AlreadyRsvpd
         guest={data.guest}
         event={data.event}
+        functions={data.functions}
         onUpdate={() => setAlreadyRsvpd(false)}
       />
     );
