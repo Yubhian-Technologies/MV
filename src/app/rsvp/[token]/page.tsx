@@ -12,9 +12,12 @@ import {
   Utensils,
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { TemplateFullPreview } from "@/components/templates/TemplatePreviewRenderer";
 import { getByRsvpToken, submitRsvp, type FunctionRsvp } from "@/lib/firebase/rsvp";
+import { getEventInvitation } from "@/lib/firebase/invitations";
+import { getTemplate } from "@/lib/templates";
 import { cn } from "@/lib/utils";
-import type { Guest, WeddingEvent, EventFunction } from "@/types";
+import type { Guest, WeddingEvent, EventFunction, Invitation, InvitationTemplate } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -127,11 +130,15 @@ function AlreadyRsvpd({
   guest,
   event,
   functions,
+  invitation,
+  template,
   onUpdate,
 }: {
   guest: Guest;
   event: WeddingEvent;
   functions: EventFunction[];
+  invitation: Invitation | null;
+  template: InvitationTemplate | null;
   onUpdate: () => void;
 }) {
   const isAttending = guest.rsvpStatus === "confirmed";
@@ -145,17 +152,19 @@ function AlreadyRsvpd({
   }[guest.rsvpStatus];
 
   const weddingDate = event.weddingDate instanceof Date ? event.weddingDate : new Date(event.weddingDate);
+  const headerBg = template?.bg ?? "linear-gradient(160deg, #9f1239 0%, #be185d 50%, #9f1239 100%)";
+  const accentColor = template?.accentColor ?? "#fff";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-rose-50/30">
-      {/* Invitation-style header — same as RSVP form */}
-      <div className="bg-gradient-to-br from-rose-600 to-rose-800 px-6 py-12 text-center text-white">
+      {/* Invitation-style header using template colours */}
+      <div className="px-6 py-12 text-center text-white" style={{ background: headerBg }}>
         <p className="text-sm font-light tracking-widest uppercase opacity-80 mb-3">
-          Wedding Invitation
+          {invitation?.customTagline || "Wedding Invitation"}
         </p>
-        <h1 className="text-4xl font-bold tracking-tight">{event.brideName}</h1>
+        <h1 className="text-4xl font-bold tracking-tight" style={{ color: accentColor }}>{event.brideName}</h1>
         <p className="text-2xl font-light opacity-80 my-1">&amp;</p>
-        <h1 className="text-4xl font-bold tracking-tight">{event.groomName}</h1>
+        <h1 className="text-4xl font-bold tracking-tight" style={{ color: accentColor }}>{event.groomName}</h1>
         <div className="mt-4 flex items-center justify-center gap-2 text-sm opacity-80">
           <CalendarHeart className="h-4 w-4" />
           {weddingDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
@@ -166,6 +175,26 @@ function AlreadyRsvpd({
       </div>
 
       <div className="mx-auto max-w-lg px-4 py-8 space-y-5">
+        {/* Designed invitation card */}
+        {template && (
+          <div>
+            <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-slate-400">
+              Invitation Card
+            </p>
+            <div className="flex justify-center">
+              <div className="overflow-hidden rounded-2xl shadow-xl">
+                <TemplateFullPreview
+                  template={template}
+                  event={event}
+                  functions={functions}
+                  customMessage={invitation?.customMessage}
+                  customTagline={invitation?.customTagline}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Thank-you card */}
         <div className="rounded-2xl border border-rose-100 bg-white p-6 shadow-sm text-center space-y-4">
           <div className="flex justify-center">
@@ -339,6 +368,8 @@ export default function RsvpPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [data, setData] = useState<{ guest: Guest; event: WeddingEvent; functions: EventFunction[] } | null>(null);
+  const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const [template, setTemplate] = useState<InvitationTemplate | null>(null);
 
   // Per-function RSVP state
   const [responses, setResponses] = useState<Record<string, FunctionRsvp>>({});
@@ -354,7 +385,7 @@ export default function RsvpPage() {
 
   useEffect(() => {
     getByRsvpToken(token)
-      .then((result) => {
+      .then(async (result) => {
         if (!result) { setNotFound(true); return; }
         setData(result);
         // If the guest already responded in a previous session, skip the form
@@ -367,6 +398,15 @@ export default function RsvpPage() {
           initial[fn.functionId] = { status: "attending", attendeeCount: result.guest.seatCount };
         }
         setResponses(initial);
+        // Fetch the designed invitation + template (non-blocking — show even if missing)
+        try {
+          const inv = await getEventInvitation(result.event.eventId);
+          if (inv) {
+            setInvitation(inv);
+            const t = getTemplate(inv.templateId);
+            if (t) setTemplate(t);
+          }
+        } catch { /* ignore — invitation preview is optional */ }
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -415,6 +455,8 @@ export default function RsvpPage() {
         guest={data.guest}
         event={data.event}
         functions={data.functions}
+        invitation={invitation}
+        template={template}
         onUpdate={() => setAlreadyRsvpd(false)}
       />
     );
@@ -435,6 +477,8 @@ export default function RsvpPage() {
 
   const { guest, event, functions } = data;
   const weddingDate = event.weddingDate instanceof Date ? event.weddingDate : new Date(event.weddingDate);
+  const headerBg = template?.bg ?? "linear-gradient(160deg, #9f1239 0%, #be185d 50%, #9f1239 100%)";
+  const accentColor = template?.accentColor ?? "#fff";
 
   const DIETARY_OPTS = [
     { value: "veg" as const, label: "🥗 Veg" },
@@ -445,16 +489,16 @@ export default function RsvpPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-rose-50/30">
-      {/* Invitation header */}
-      <div className="bg-gradient-to-br from-rose-600 to-rose-800 px-6 py-12 text-center text-white">
+      {/* Invitation header — styled with the couple's chosen template */}
+      <div className="px-6 py-12 text-center text-white" style={{ background: headerBg }}>
         <p className="text-sm font-light tracking-widest uppercase opacity-80 mb-3">
-          Wedding Invitation
+          {invitation?.customTagline || "Wedding Invitation"}
         </p>
-        <h1 className="text-4xl font-bold tracking-tight">
+        <h1 className="text-4xl font-bold tracking-tight" style={{ color: accentColor }}>
           {event.brideName}
         </h1>
         <p className="text-2xl font-light opacity-80 my-1">&amp;</p>
-        <h1 className="text-4xl font-bold tracking-tight">
+        <h1 className="text-4xl font-bold tracking-tight" style={{ color: accentColor }}>
           {event.groomName}
         </h1>
         <div className="mt-4 flex items-center justify-center gap-2 text-sm opacity-80">
@@ -466,8 +510,28 @@ export default function RsvpPage() {
         </div>
       </div>
 
-      {/* Personalized greeting */}
       <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
+        {/* Designed invitation card */}
+        {template && (
+          <div>
+            <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-slate-400">
+              Invitation Card
+            </p>
+            <div className="flex justify-center">
+              <div className="overflow-hidden rounded-2xl shadow-xl">
+                <TemplateFullPreview
+                  template={template}
+                  event={event}
+                  functions={functions}
+                  customMessage={invitation?.customMessage}
+                  customTagline={invitation?.customTagline}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Personalized greeting */}
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-4 text-center">
           <p className="text-rose-800 font-medium">
             Dear {guest.name.split(" ")[0]},
