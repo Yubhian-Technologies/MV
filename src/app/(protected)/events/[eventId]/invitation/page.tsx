@@ -89,6 +89,7 @@ export default function EventInvitationPage() {
     register,
     handleSubmit,
     watch,
+    getValues,
     reset,
     formState: { errors },
   } = useForm<InvitationCustomizationInput>({
@@ -175,12 +176,44 @@ export default function EventInvitationPage() {
   };
 
   const handlePublish = async () => {
-    if (!invitation) return;
+    if (!user || !template) return;
     setPublishing(true);
     try {
-      await publishInvitation(invitation.invitationId);
-      setInvitation((prev) => prev ? { ...prev, status: "published" } : prev);
-      toast.success("Invitation published!");
+      const formData = getValues();
+      const payload = {
+        customMessage: formData.customMessage,
+        customTagline: formData.customTagline,
+        language: formData.language,
+        showVenueMap,
+        showDressCode,
+        showRsvpButton,
+      };
+
+      let inv = invitation;
+      if (inv) {
+        await updateInvitation(inv.invitationId, payload);
+        inv = { ...inv, ...payload };
+      } else {
+        const id = await createInvitation(user.uid, eventId, template.templateId);
+        inv = {
+          invitationId: id,
+          eventId,
+          hostId: user.uid,
+          templateId: template.templateId,
+          ...payload,
+          status: "draft",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      }
+
+      await publishInvitation(inv.invitationId);
+      setInvitation({ ...inv, status: "published" });
+      toast.success(
+        invitation?.status === "published"
+          ? "Live invitation updated! 🎉"
+          : "Invitation published! 🎉"
+      );
     } catch {
       toast.error("Failed to publish. Please try again.");
     } finally {
@@ -435,7 +468,7 @@ export default function EventInvitationPage() {
                 type="button"
                 className="flex-1 bg-rose-600 hover:bg-rose-700"
                 onClick={handlePublish}
-                disabled={publishing || !invitation || invitation.status === "published"}
+                disabled={publishing}
               >
                 {publishing ? (
                   <span className="flex items-center gap-2">
@@ -443,7 +476,10 @@ export default function EventInvitationPage() {
                     Publishing…
                   </span>
                 ) : invitation?.status === "published" ? (
-                  "Published"
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Update Live
+                  </>
                 ) : (
                   <>
                     <Send className="mr-2 h-4 w-4" />
