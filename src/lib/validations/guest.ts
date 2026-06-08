@@ -17,6 +17,7 @@ export const guestSchema = z.object({
     .optional()
     .or(z.literal("")),
   side: z.enum(["bride", "groom", "mutual"]),
+  category: z.string().optional().or(z.literal("")),
   invitedFunctions: z.array(z.string()),
   seatCount: z.number().int().min(1, "At least 1 seat").max(20, "Max 20 seats"),
   notes: z.string().max(300).optional().or(z.literal("")),
