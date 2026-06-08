@@ -59,16 +59,36 @@ function CeremonyCard({
     <div className="rounded-2xl border border-slate-100 bg-white p-5 space-y-4 shadow-sm">
       <div className="flex items-start gap-3">
         <span className="text-2xl">{emoji}</span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-slate-900">{displayName}</p>
           <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
             <CalendarHeart className="h-3.5 w-3.5 shrink-0" />
             {formatDate(fnDate)}{fn.startTime ? ` · ${formatTime(fn.startTime)}` : ""}
           </p>
-          <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
-            {fn.venueName}, {fn.venueCity}
-          </p>
+          {(fn.venueName || fn.venueCity) && (
+            <div className="mt-1 space-y-0.5">
+              <p className="text-sm text-slate-500 flex items-start gap-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span>
+                  {[fn.venueName, fn.venueCity].filter(Boolean).join(", ")}
+                  {fn.venueAddress && (
+                    <span className="block text-xs text-slate-400">{fn.venueAddress}</span>
+                  )}
+                </span>
+              </p>
+              {fn.mapsURL && (
+                <a
+                  href={fn.mapsURL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-5 inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100"
+                >
+                  <MapPin className="h-3 w-3" />
+                  Open in Maps
+                </a>
+              )}
+            </div>
+          )}
           {fn.dressCode && (
             <p className="text-xs text-slate-400 mt-1">Dress code: {fn.dressCode}</p>
           )}
@@ -242,16 +262,34 @@ function AlreadyRsvpd({
               return (
                 <div key={fn.functionId} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm flex items-start gap-3">
                   <span className="text-xl mt-0.5">{FN_EMOJI[fn.name] ?? "✨"}</span>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-900 text-sm">{displayName}</p>
                     <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                       <CalendarHeart className="h-3 w-3 shrink-0" />
                       {formatDate(fnDate)}{fn.startTime ? ` · ${formatTime(fn.startTime)}` : ""}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                      <MapPin className="h-3 w-3 shrink-0" />
-                      {fn.venueName}, {fn.venueCity}
-                    </p>
+                    {(fn.venueName || fn.venueCity) && (
+                      <p className="text-xs text-slate-500 mt-0.5 flex items-start gap-1">
+                        <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
+                        <span>
+                          {[fn.venueName, fn.venueCity].filter(Boolean).join(", ")}
+                          {fn.venueAddress && (
+                            <span className="block text-[10px] text-slate-400">{fn.venueAddress}</span>
+                          )}
+                        </span>
+                      </p>
+                    )}
+                    {fn.mapsURL && (
+                      <a
+                        href={fn.mapsURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-medium text-rose-600 hover:bg-rose-100"
+                      >
+                        <MapPin className="h-2.5 w-2.5" />
+                        Open in Maps
+                      </a>
+                    )}
                   </div>
                 </div>
               );
