@@ -277,16 +277,24 @@ function InvitationContent({ template, event, functions, customMessage, customTa
                 const fnDate = fn.date
                   ? fn.date instanceof Date ? fn.date : new Date(fn.date)
                   : null;
+                const venue = [fn.venueName, fn.venueCity].filter(Boolean).join(", ");
                 return (
                   <div
                     key={i}
-                    className="flex items-center justify-between rounded px-3 py-1.5"
+                    className="flex items-start justify-between rounded px-3 py-1.5"
                     style={{ background: `${accent}18` }}
                   >
-                    <span className="text-[9px] font-semibold" style={{ color: accent }}>
-                      {fn.name === "Custom" && fn.customName ? fn.customName : fn.name}
-                    </span>
-                    <span className="text-[9px]" style={{ color: mutedText }}>
+                    <div>
+                      <span className="text-[9px] font-semibold block" style={{ color: accent }}>
+                        {fn.name === "Custom" && fn.customName ? fn.customName : fn.name}
+                      </span>
+                      {venue && (
+                        <span className="text-[8px] block leading-tight" style={{ color: mutedText }}>
+                          {venue}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[9px] shrink-0 ml-2" style={{ color: mutedText }}>
                       {fnDate ? `${fnDate.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}{fn.startTime ? ` · ${formatTime(fn.startTime)}` : ""}
                     </span>
                   </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, MapPin, Shirt, Trash2, Pencil } from "lucide-react";
+import { Clock, MapPin, Shirt, Trash2, Pencil, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { deleteFunction } from "@/lib/firebase/events";
 import { toast } from "sonner";
@@ -93,6 +93,18 @@ export function FunctionListItem({
 
         {fn.venueAddress && (
           <p className="text-xs text-slate-400">{fn.venueAddress}</p>
+        )}
+        {fn.mapsURL && (
+          <a
+            href={fn.mapsURL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-rose-500 hover:text-rose-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="h-3 w-3" />
+            View on map
+          </a>
         )}
         {fn.notes && (
           <p className="mt-1 text-xs text-slate-400 italic">{fn.notes}</p>

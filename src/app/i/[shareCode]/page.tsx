@@ -69,11 +69,13 @@ function CeremonyCard({ fn }: { fn: EventFunction }) {
             </span>
           </div>
         )}
-        {fn.venueName && (
+        {(fn.venueName || fn.mapsURL) && (
           <div className="flex items-start gap-2.5">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />
             <div>
-              <p className="font-medium text-slate-800">{fn.venueName}</p>
+              {fn.venueName && (
+                <p className="font-medium text-slate-800">{fn.venueName}</p>
+              )}
               {fn.venueAddress && (
                 <p className="text-xs text-slate-500">{fn.venueAddress}</p>
               )}
@@ -85,10 +87,10 @@ function CeremonyCard({ fn }: { fn: EventFunction }) {
                   href={fn.mapsURL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700"
+                  className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 hover:text-rose-700"
                 >
                   <ExternalLink className="h-3 w-3" />
-                  View on map
+                  Open in Maps
                 </a>
               )}
             </div>
